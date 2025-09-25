@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Hünkarım'ın Harem Simülatörü</title>
+  <style>
+    :root{--bg:#130707;--card:#200b0b;--accent:#fc8484;--muted:#b89494;--good:#34d399}
+    *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
+    body{margin:0;background:linear-gradient(180deg,#280707 0%,var(--bg) 100%);color:#e6eef8;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:28px}
+    .wrap{width:1100px;max-width:98%;display:grid;grid-template-columns:320px 1fr;gap:18px}
+    .panel{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(23, 2, 2, 0.6)}
+    h1{font-size:18px;margin:0 0 6px}
+    .subtitle{color:var(--muted);font-size:13px;margin-bottom:12px}
+    .roster{display:flex;flex-direction:column;gap:8px}
+    .card{display:flex;gap:10px;align-items:center;padding:8px;border-radius:10px;background:rgba(255,255,255,0.01);cursor:pointer;border:1px solid transparent}
+    .card:hover{border-color:rgba(200,200,200,0.03)}
+    .avatar{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:26px;background:linear-gradient(135deg,rgba(255,255,255,0.02),rgba(0,0,0,0.1))}
+    .info{flex:1}
+    .name{font-weight:600}
+    .desc{font-size:13px;color:var(--muted)}
+    .bar{height:10px;background:rgba(255,255,255,0.05);border-radius:999px;margin-top:6px;overflow:hidden}
+    .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#00ff4c);width:0%}
+    .main{display:flex;flex-direction:column;gap:12px}
+
+    .status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .stat{background:rgba(255,255,255,0.01);padding:10px;border-radius:8px;text-align:center}
+    .big{font-size:20px;font-weight:700}
+
+    .events{display:flex;gap:8px;flex-wrap:wrap}
+    .btn{padding:10px 12px;border-radius:10px;background:linear-gradient(180deg,var(--accent),#921e9c);border:none;color:white;cursor:pointer}
+    .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+
+    .log{height:220px;overflow:auto;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;font-size:13px}
+    .center{display:flex;align-items:center;justify-content:center}
+
+    footer{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+
+    /* Responsive */
+    @media (max-width:900px){.wrap{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel">
+      <h1>Harem Meclisi</h1>
+      <div class="subtitle">Seç ve ilişkinizi ilerlet, Hünkarım 👑</div>
+      <div class="roster" id="roster"></div>
+      <hr style="opacity:0.06;margin:12px 0">
+      <div style="display:flex;gap:8px"><button class="btn" id="recruitBtn">Yeni Aday Getir</button><button class="btn secondary" id="resetBtn">Sıfırla</button></div>
+      <div style="height:12px"></div>
+      <div style="font-size:13px;color:var(--muted)">Kaydetme: <span id="autosave">Aktif</span></div>
+    </aside>
+
+    <main class="panel main">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+        <div>
+          <h1>Hünkarım'ın Sarayı</h1>
+          <div class="subtitle">Kaydetmek için tarayıcı kullanılıyor. Oyunu kapatınca geri dönersiniz 👑</div>
+        </div>
+        <div class="center">
+          <div style="text-align:right;margin-right:12px"><div style="font-size:13px;color:var(--muted)">Altın</div><div class="big" id="gold">150</div></div>
+        </div>
+      </div>
+
+      <div class="status-grid">
+        <div class="stat"><div class="desc">Mutluluk</div><div class="big" id="happiness">45</div></div>
+        <div class="stat"><div class="desc">İtibar</div><div class="big" id="prestige">20</div></div>
+        <div class="stat"><div class="desc">Güç</div><div class="big" id="power">12</div></div>
+        <div class="stat"><div class="desc">Gün</div><div class="big" id="day">1</div></div>
+      </div>
+
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <section style="flex:1">
+          <h2 style="margin:0 0 8px">Seçili Aday</h2>
+          <div id="selectedArea" style="background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;min-height:140px">
+            <div style="text-align:center;color:var(--muted);">Henüz aday seçilmedi.</div>
+          </div>
+        </section>
+
+        <section style="width:320px">
+          <h2 style="margin:0 0 8px">Günlük Etkinlikler</h2>
+          <div class="events">
+            <button class="btn" id="talkBtn">Konuş (+5 Sevgi)</button>
+            <button class="btn secondary" id="giftBtn">Hediye Ver (-10 Altın)</button>
+            <button class="btn" id="feastBtn">Şölen Düzenle (-40 Altın)</button>
+            <button class="btn secondary" id="trainBtn">Asker Eğit (+3 Güç)</button>
+          </div>
+          <div style="height:12px"></div>
+          <div class="log" id="log"></div>
+        </section>
+      </div>
+
+      <footer>Basit bir harem simülatörü — etik sınırlar içinde, romantik ve oyun amaçlı. Yapımcı: ChatGPT. 👑</footer>
+    </main>
+  </div>
+
+  <script>
+    // Basit veri yapısı
+    const defaultChars = [
+      {id:1,name:'Leyla',emoji:'🌸',desc:'Nazik ve müziksever',aff:30},
+      {id:2,name:'Aylin',emoji:'🌙',desc:'Zeki ve hesapçı',aff:25},
+      {id:3,name:'Duru',emoji:'💧',desc:'Sakin, kitap kurdu',aff:35},
+      {id:4,name:'Mina',emoji:'🔥',desc:'Canlı ve neşeli',aff:20}
+    ];
+
+    let state = {
+      gold:150,
+      day:1,
+      happiness:45,
+      prestige:20,
+      power:12,
+      chars:[],
+      selectedId:null
+    };
+
+    // DOM
+    const rosterEl = document.getElementById('roster');
+    const selectedArea = document.getElementById('selectedArea');
+    const goldEl = document.getElementById('gold');
+    const dayEl = document.getElementById('day');
+    const happinessEl = document.getElementById('happiness');
+    const prestigeEl = document.getElementById('prestige');
+    const powerEl = document.getElementById('power');
+    const logEl = document.getElementById('log');
+
+    // Yükle veya başlat
+    function load(){
+      const raw = localStorage.getItem('harem_state_v1');
+      if(raw){
+        try{state=JSON.parse(raw);}catch(e){init();}
+      }else init();
+      render();
+    }
+    function init(){
+      state = {...state,chars:defaultChars.map(c=>({...c}))};
+    }
+
+    function save(){
+      localStorage.setItem('harem_state_v1',JSON.stringify(state));
+      document.getElementById('autosave').innerText='Aktif';
+    }
+
+    // Roster render
+    function renderRoster(){
+      rosterEl.innerHTML='';
+      state.chars.forEach(c=>{
+        const card=document.createElement('div');card.className='card';
+        card.onclick=()=>{state.selectedId=c.id;render();};
+        card.innerHTML=`<div class='avatar'>${c.emoji}</div><div class='info'><div class='name'>${c.name}</div><div class='desc'>${c.desc}</div><div class='bar'><i style='width:${Math.min(100,Math.round(c.aff))}%'></i></div></div>`;
+        rosterEl.appendChild(card);
+      });
+    }
+
+    function renderSelected(){
+      if(!state.selectedId){selectedArea.innerHTML=`<div style="text-align:center;color:var(--muted);">Henüz aday seçilmedi.</div>`;return}
+      const c = state.chars.find(x=>x.id===state.selectedId);
+      if(!c){selectedArea.innerHTML='<div>Seçilmiş aday bulunamadı.</div>';return}
+      selectedArea.innerHTML = `
+        <div style='display:flex;gap:12px;align-items:center'>
+          <div style='width:96px;height:96px;border-radius:12px;background:linear-gradient(135deg,rgba(255,255,255,0.02),rgba(0,0,0,0.12));display:flex;align-items:center;justify-content:center;font-size:44px'>${c.emoji}</div>
+          <div style='flex:1'>
+            <div style='font-size:18px;font-weight:700'>${c.name}</div>
+            <div style='color:var(--muted);margin-top:6px'>${c.desc}</div>
+            <div class='bar' style='margin-top:8px'><i style='width:${Math.min(100,Math.round(c.aff))}%'></i></div>
+            <div style='margin-top:8px;font-size:13px'>Bağlılık: <strong>${Math.round(c.aff)}</strong></div>
+          </div>
+        </div>
+        <div style='margin-top:10px;display:flex;gap:8px'>
+          <button class='btn' id='flirtBtn'>Flört Et (+8 Sevgi)</button>
+          <button class='btn secondary' id='talkPrivateBtn'>Özel Konuşma (+4 Sevgi)</button>
+          <button class='btn secondary' id='dismissBtn'>Yanından Gönder (-)</button>
+        </div>
+      `;
+
+      document.getElementById('flirtBtn').onclick=()=>actionFlirt(c.id);
+      document.getElementById('talkPrivateBtn').onclick=()=>actionTalk(c.id);
+      document.getElementById('dismissBtn').onclick=()=>{dismiss(c.id)};
+    }
+
+    // Actions
+    function log(text){
+      const time = 'Gün '+state.day;
+      const p=document.createElement('div');p.innerHTML=`<strong>${time}:</strong> ${text}`;
+      logEl.prepend(p);
+    }
+
+    function actionFlirt(id){
+      const c = state.chars.find(x=>x.id===id); if(!c) return;
+      c.aff += 8; state.happiness+=1; state.prestige+=1; state.gold -= 5;
+      clampState(); render(); log(`${c.name} ile hoş bir an yaşandı. +8 bağlılık, -5 altın.`)
+    }
+    function actionTalk(id){
+      const c = state.chars.find(x=>x.id===id); if(!c) return;
+      c.aff +=4; state.happiness+=1; state.gold -=2; clampState(); render(); log(`${c.name} ile derin bir sohbet. +4 bağlılık.`)
+    }
+    function dismiss(id){
+      const idx = state.chars.findIndex(x=>x.id===id); if(idx===-1) return;
+      const removed = state.chars.splice(idx,1)[0]; if(state.selectedId===id) state.selectedId=null;
+      render(); log(`${removed.name} haremden ayrıldı.`)
+    }
+
+    // Global events
+    document.getElementById('talkBtn').onclick=()=>{
+      if(!state.selectedId){log('Seçili aday yok.');return}
+      actionTalk(state.selectedId);
+      endDay();
+    }
+    document.getElementById('giftBtn').onclick=()=>{
+      if(state.gold<10){log('Altın yetersiz.');return}
+      if(!state.selectedId){log('Seçili aday yok.');return}
+      const c = state.chars.find(x=>x.id===state.selectedId);
+      state.gold -=10; c.aff +=12; state.happiness +=2; clampState(); render(); log(`${c.name} hediye aldı. +12 bağlılık, -10 altın.`); endDay();
+    }
+    document.getElementById('feastBtn').onclick=()=>{
+      if(state.gold<40){log('Altın yetersiz.');return}
+      state.gold -=40; state.happiness +=8; state.prestige +=6; clampState(); render(); log('Büyük bir şölen düzenlendi. Saray neşelendi.'); endDay();
+    }
+    document.getElementById('trainBtn').onclick=()=>{
+      state.power +=3; state.gold -=20; clampState(); render(); log('Askerler eğitildi. Güç arttı.'); endDay();
+    }
+
+    document.getElementById('recruitBtn').onclick=()=>{
+      // Yeni rastgele aday
+      const names = ['Nehir','Seda','Zeynep','Elif','Bahar','Selin','Yasemin','Sinem', 'Katarina'];
+      const descs = ['Nazik','Gizemli','Bilge','Neşeli','Sanatsever','Hırçın','Merhametli','Cesur', 'İmparotiçe'];
+      const emoji = ['🌺','🌼','🌙','🌊','🔮','🔥','🌸','🍃', '💋'];
+      const id = Date.now()%100000 + Math.floor(Math.random()*100);
+      const i = Math.floor(Math.random()*names.length);
+      const c = {id, name:names[i], emoji:emoji[i], desc:descs[i], aff:20+Math.floor(Math.random()*20)};
+      state.chars.push(c); render(); save(); log(`${c.name} saraya getirildi.`);
+    }
+
+    document.getElementById('resetBtn').onclick=()=>{
+      if(confirm('Her şeyi sıfırlamak istediğinize emin misiniz?')){localStorage.removeItem('harem_state_v1');init();render();log('Oyun sıfırlandı.');}
+    }
+
+    function endDay(){
+      state.day +=1; // her gün küçük olaylar
+      state.chars.forEach(c=>{
+        // rastgele düşüş veya yükseliş
+        const r = Math.random();
+        if(r<0.12) c.aff -= Math.floor(Math.random()*6+3);
+        else if(r>0.88) c.aff += Math.floor(Math.random()*6+3);
+      });
+      // otomatik kazanım ya da kayb
+      if(state.happiness>70) state.prestige +=2;
+      state.gold += 8 + Math.floor(Math.random()*6);
+      clampState(); render(); save(); log('Gün sonu: Saray yaşamı devam ediyor.');
+    }
+
+    function clampState(){
+      state.gold = Math.max(0, Math.round(state.gold));
+      state.happiness = Math.max(0, Math.round(state.happiness));
+      state.prestige = Math.max(0, Math.round(state.prestige));
+      state.power = Math.max(0, Math.round(state.power));
+      state.chars.forEach(c=>{c.aff = Math.max(0, Math.min(100, Math.round(c.aff)))});
+    }
+
+    function render(){
+      renderRoster(); renderSelected(); goldEl.innerText = state.gold; dayEl.innerText = state.day; happinessEl.innerText = state.happiness; prestigeEl.innerText = state.prestige; powerEl.innerText = state.power; save();
+    }
+
+    // İlk yükleme
+    load();
+
+    // Kısa klavye kısayolları
+    document.addEventListener('keydown', (e)=>{
+      if(e.key==='n'){document.getElementById('recruitBtn').click()}
+      if(e.key==='s'){localStorage.setItem('harem_state_v1',JSON.stringify(state));log('Elle kaydedildi.');}
+    });
+
+  </script>
+</body>
+</html>
