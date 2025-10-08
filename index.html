@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Hünkarım'ın Harem Simülatörü</title>
   <style>
-    :root{--bg:#130707;--card:#200b0b;--accent:#fc8484;--muted:#b89494;--good:#34d399}
+    :root{--bg:#130707;--card:#200b0b;--accent:#fc8484;--muted:#b89494;--good:#34d399;--warning:#f59e0b}
     *{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial}
     body{margin:0;background:linear-gradient(180deg,#280707 0%,var(--bg) 100%);color:#e6eef8;min-height:100vh;display:flex;align-items:flex-start;justify-content:center;padding:28px}
     .wrap{width:1100px;max-width:98%;display:grid;grid-template-columns:320px 1fr;gap:18px}
@@ -28,13 +28,21 @@
     .big{font-size:20px;font-weight:700}
 
     .events{display:flex;gap:8px;flex-wrap:wrap}
-    .btn{padding:10px 12px;border-radius:10px;background:linear-gradient(180deg,var(--accent),#921e9c);border:none;color:white;cursor:pointer}
+    .btn{padding:10px 12px;border-radius:10px;background:linear-gradient(180deg,var(--accent),#921e9c);border:none;color:white;cursor:pointer;font-size:13px}
+    .btn:disabled{opacity:0.5;cursor:not-allowed}
     .btn.secondary{background:transparent;border:1px solid rgba(255,255,255,0.06)}
+    .btn.warning{background:linear-gradient(180deg,var(--warning),#b45309)}
+    .btn.success{background:linear-gradient(180deg,var(--good),#059669)}
 
     .log{height:220px;overflow:auto;background:rgba(0,0,0,0.2);padding:10px;border-radius:8px;font-size:13px}
     .center{display:flex;align-items:center;justify-content:center}
 
     footer{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+    
+    .quest-panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;margin-top:12px}
+    .quest-title{font-size:14px;font-weight:600;margin-bottom:8px}
+    .quest-desc{font-size:13px;color:var(--muted)}
+    .quest-reward{font-size:12px;color:var(--good);margin-top:4px}
 
     /* Responsive */
     @media (max-width:900px){.wrap{grid-template-columns:1fr;}}
@@ -47,7 +55,11 @@
       <div class="subtitle">Seç ve ilişkinizi ilerlet, Hünkarım 👑</div>
       <div class="roster" id="roster"></div>
       <hr style="opacity:0.06;margin:12px 0">
-      <div style="display:flex;gap:8px"><button class="btn" id="recruitBtn">Yeni Aday Getir</button><button class="btn secondary" id="resetBtn">Sıfırla</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="recruitBtn">Yeni Aday Getir (-50 Altın)</button>
+        <button class="btn success" id="nextDayBtn">Sonraki Güne Atla (-150 Altın)</button>
+        <button class="btn secondary" id="resetBtn">Tamamen Sıfırla</button>
+      </div>
       <div style="height:12px"></div>
       <div style="font-size:13px;color:var(--muted)">Kaydetme: <span id="autosave">Aktif</span></div>
     </aside>
@@ -59,7 +71,10 @@
           <div class="subtitle">Kaydetmek için tarayıcı kullanılıyor. Oyunu kapatınca geri dönersiniz 👑</div>
         </div>
         <div class="center">
-          <div style="text-align:right;margin-right:12px"><div style="font-size:13px;color:var(--muted)">Altın</div><div class="big" id="gold">150</div></div>
+          <div style="text-align:right;margin-right:12px">
+            <div style="font-size:13px;color:var(--muted)">Altın</div>
+            <div class="big" id="gold">150</div>
+          </div>
         </div>
       </div>
 
@@ -70,21 +85,36 @@
         <div class="stat"><div class="desc">Gün</div><div class="big" id="day">1</div></div>
       </div>
 
+      <!-- Görev Paneli -->
+      <div class="quest-panel">
+        <div class="quest-title">📜 Aktif Görev</div>
+        <div class="quest-desc" id="currentQuest">Görev bulunmuyor. İlk görev için bir işlem yapın.</div>
+        <div class="quest-reward" id="questReward">Ödül: </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--muted)" id="questProgress">İlerleme: </div>
+      </div>
+
       <div style="display:flex;gap:12px;align-items:flex-start">
         <section style="flex:1">
           <h2 style="margin:0 0 8px">Seçili Aday</h2>
           <div id="selectedArea" style="background:rgba(255,255,255,0.02);padding:12px;border-radius:10px;min-height:140px">
             <div style="text-align:center;color:var(--muted);">Henüz aday seçilmedi.</div>
           </div>
+          
+          <!-- Kişisel Etkileşim Butonları -->
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn" id="flirtBtn" disabled>Flört Et (+8 Sevgi, -5 Altın)</button>
+            <button class="btn secondary" id="talkBtn" disabled>Konuş (+4 Sevgi, -2 Altın)</button>
+            <button class="btn secondary" id="giftBtn" disabled>Hediye Ver (+12 Sevgi, -10 Altın)</button>
+            <button class="btn warning" id="borrowFromSelectedBtn" disabled>Borç İste (25-50 Altın)</button>
+            <button class="btn" id="dismissBtn" disabled>Yanından Gönder (+40 Altın)</button>
+          </div>
         </section>
 
         <section style="width:320px">
-          <h2 style="margin:0 0 8px">Günlük Etkinlikler</h2>
+          <h2 style="margin:0 0 8px">Saray İşlemleri</h2>
           <div class="events">
-            <button class="btn" id="talkBtn">Konuş (+5 Sevgi)</button>
-            <button class="btn secondary" id="giftBtn">Hediye Ver (-10 Altın)</button>
-            <button class="btn" id="feastBtn">Şölen Düzenle (-40 Altın)</button>
-            <button class="btn secondary" id="trainBtn">Asker Eğit (+3 Güç)</button>
+            <button class="btn" id="feastBtn">Şölen Düzenle (+8 Mutluluk, +6 İtibar, -40 Altın)</button>
+            <button class="btn secondary" id="trainBtn">Asker Eğit (+3 Güç, -20 Altın)</button>
           </div>
           <div style="height:12px"></div>
           <div class="log" id="log"></div>
@@ -101,7 +131,8 @@
       {id:1,name:'Leyla',emoji:'🌸',desc:'Nazik ve müziksever',aff:30},
       {id:2,name:'Aylin',emoji:'🌙',desc:'Zeki ve hesapçı',aff:25},
       {id:3,name:'Duru',emoji:'💧',desc:'Sakin, kitap kurdu',aff:35},
-      {id:4,name:'Mina',emoji:'🔥',desc:'Canlı ve neşeli',aff:20}
+      {id:4,name:'Mina',emoji:'🔥',desc:'Canlı ve neşeli',aff:20},
+      {id:5,name:'Sedat Paşa',emoji:'🎩',desc:'Sadık ve güvenilir paşa',aff:40}
     ];
 
     let state = {
@@ -111,10 +142,136 @@
       prestige:20,
       power:12,
       chars:[],
-      selectedId:null
+      selectedId:null,
+      currentQuest: null,
+      questProgress: 0,
+      questCompleted: false
     };
 
-    // DOM
+    // Görev şablonları - sonsuz görev üretmek için
+    const questTemplates = [
+      {
+        type: 'gold',
+        generate: (state) => {
+          const currentGold = state.gold;
+          const targetGold = currentGold + Math.max(50, Math.floor(currentGold * 0.3) + Math.floor(Math.random() * 30) + 20);
+          return {
+            type: 'gold',
+            desc: `${targetGold} altın topla`,
+            target: targetGold,
+            reward: { 
+              gold: Math.floor(targetGold * 0.2) + 10, 
+              happiness: Math.floor(Math.random() * 3) + 2 
+            },
+            check: (state) => state.gold >= targetGold
+          };
+        }
+      },
+      {
+        type: 'happiness',
+        generate: (state) => {
+          const currentHappiness = state.happiness;
+          const targetHappiness = currentHappiness + Math.max(15, Math.floor(currentHappiness * 0.2) + Math.floor(Math.random() * 10) + 10);
+          return {
+            type: 'happiness',
+            desc: `Mutluluğu ${targetHappiness}'e çıkar`,
+            target: targetHappiness,
+            reward: { 
+              gold: Math.floor(targetHappiness * 0.8) + 15, 
+              prestige: Math.floor(Math.random() * 4) + 3 
+            },
+            check: (state) => state.happiness >= targetHappiness
+          };
+        }
+      },
+      {
+        type: 'prestige',
+        generate: (state) => {
+          const currentPrestige = state.prestige;
+          const targetPrestige = currentPrestige + Math.max(10, Math.floor(currentPrestige * 0.25) + Math.floor(Math.random() * 8) + 8);
+          return {
+            type: 'prestige',
+            desc: `İtibarı ${targetPrestige}'e çıkar`,
+            target: targetPrestige,
+            reward: { 
+              gold: Math.floor(targetPrestige * 1.2) + 20, 
+              power: Math.floor(Math.random() * 3) + 2 
+            },
+            check: (state) => state.prestige >= targetPrestige
+          };
+        }
+      },
+      {
+        type: 'power',
+        generate: (state) => {
+          const currentPower = state.power;
+          const targetPower = currentPower + Math.max(8, Math.floor(currentPower * 0.3) + Math.floor(Math.random() * 6) + 5);
+          return {
+            type: 'power',
+            desc: `Gücü ${targetPower}'e çıkar`,
+            target: targetPower,
+            reward: { 
+              gold: Math.floor(targetPower * 1.5) + 15, 
+              happiness: Math.floor(Math.random() * 4) + 2 
+            },
+            check: (state) => state.power >= targetPower
+          };
+        }
+      },
+      {
+        type: 'affection',
+        generate: (state) => {
+          const maxAffection = Math.max(...state.chars.map(c => c.aff), 0);
+          const targetAffection = maxAffection + Math.max(15, Math.floor(maxAffection * 0.2) + Math.floor(Math.random() * 12) + 10);
+          return {
+            type: 'affection',
+            desc: `Bir harem üyesinde ${targetAffection} bağlılığa ulaş`,
+            target: targetAffection,
+            reward: { 
+              gold: Math.floor(targetAffection * 0.7) + 25, 
+              prestige: Math.floor(Math.random() * 5) + 5 
+            },
+            check: (state) => state.chars.some(c => c.aff >= targetAffection)
+          };
+        }
+      },
+      {
+        type: 'members',
+        generate: (state) => {
+          const currentMembers = state.chars.length;
+          const targetMembers = currentMembers + Math.max(1, Math.floor(Math.random() * 2) + 1);
+          return {
+            type: 'members',
+            desc: `${targetMembers} harem üyesine sahip ol`,
+            target: targetMembers,
+            reward: { 
+              gold: targetMembers * 20 + 30, 
+              happiness: Math.floor(Math.random() * 6) + 4 
+            },
+            check: (state) => state.chars.length >= targetMembers
+          };
+        }
+      },
+      {
+        type: 'day',
+        generate: (state) => {
+          const currentDay = state.day;
+          const targetDay = currentDay + Math.max(5, Math.floor(currentDay * 0.15) + Math.floor(Math.random() * 8) + 5);
+          return {
+            type: 'day',
+            desc: `${targetDay}. güne ulaş`,
+            target: targetDay,
+            reward: { 
+              gold: Math.floor(targetDay * 2.5) + 40, 
+              prestige: Math.floor(Math.random() * 8) + 6 
+            },
+            check: (state) => state.day >= targetDay
+          };
+        }
+      }
+    ];
+
+    // DOM elementleri
     const rosterEl = document.getElementById('roster');
     const selectedArea = document.getElementById('selectedArea');
     const goldEl = document.getElementById('gold');
@@ -123,6 +280,21 @@
     const prestigeEl = document.getElementById('prestige');
     const powerEl = document.getElementById('power');
     const logEl = document.getElementById('log');
+    const currentQuestEl = document.getElementById('currentQuest');
+    const questRewardEl = document.getElementById('questReward');
+    const questProgressEl = document.getElementById('questProgress');
+
+    // Buton elementleri
+    const flirtBtn = document.getElementById('flirtBtn');
+    const talkBtn = document.getElementById('talkBtn');
+    const giftBtn = document.getElementById('giftBtn');
+    const borrowFromSelectedBtn = document.getElementById('borrowFromSelectedBtn');
+    const dismissBtn = document.getElementById('dismissBtn');
+    const feastBtn = document.getElementById('feastBtn');
+    const trainBtn = document.getElementById('trainBtn');
+    const recruitBtn = document.getElementById('recruitBtn');
+    const nextDayBtn = document.getElementById('nextDayBtn');
+    const resetBtn = document.getElementById('resetBtn');
 
     // Yükle veya başlat
     function load(){
@@ -130,15 +302,300 @@
       if(raw){
         try{state=JSON.parse(raw);}catch(e){init();}
       }else init();
+      
+      if (!state.currentQuest) {
+        generateNewQuest();
+      }
+      
       render();
+      setupEventListeners();
     }
+    
     function init(){
-      state = {...state,chars:defaultChars.map(c=>({...c}))};
+      state = {
+        gold:150,
+        day:1,
+        happiness:45,
+        prestige:20,
+        power:12,
+        chars:defaultChars.map(c=>({...c})),
+        selectedId:null,
+        currentQuest: null,
+        questProgress: 0,
+        questCompleted: false
+      };
+      generateNewQuest();
     }
 
     function save(){
       localStorage.setItem('harem_state_v1',JSON.stringify(state));
       document.getElementById('autosave').innerText='Aktif';
+    }
+
+    // Event listener'ları kur
+    function setupEventListeners() {
+      flirtBtn.onclick = () => {
+        if(!state.selectedId){log('Seçili aday yok.');return}
+        if(state.gold < 5){log('Altın yetersiz.');return}
+        const c = state.chars.find(x=>x.id===state.selectedId);
+        c.aff += 8; state.happiness+=1; state.prestige+=1; state.gold -= 5;
+        clampState(); 
+        updateQuestProgress();
+        render(); 
+        log(`${c.name} ile hoş bir an yaşandı. +8 bağlılık, -5 altın.`);
+      };
+
+      talkBtn.onclick = () => {
+        if(!state.selectedId){log('Seçili aday yok.');return}
+        if(state.gold < 2){log('Altın yetersiz.');return}
+        const c = state.chars.find(x=>x.id===state.selectedId);
+        c.aff +=4; state.happiness+=1; state.gold -=2; 
+        clampState(); 
+        updateQuestProgress();
+        render(); 
+        log(`${c.name} ile derin bir sohbet. +4 bağlılık, -2 altın.`);
+      };
+
+      giftBtn.onclick = () => {
+        if(!state.selectedId){log('Seçili aday yok.');return}
+        if(state.gold < 10){log('Altın yetersiz.');return}
+        const c = state.chars.find(x=>x.id===state.selectedId);
+        state.gold -=10; c.aff +=12; state.happiness +=2; 
+        clampState(); 
+        updateQuestProgress();
+        render(); 
+        log(`${c.name} hediye aldı. +12 bağlılık, -10 altın.`);
+      };
+
+      borrowFromSelectedBtn.onclick = () => {
+        if(!state.selectedId){log('Seçili aday yok.');return}
+        const c = state.chars.find(x=>x.id===state.selectedId);
+        const borrowedGold = 25 + Math.floor(Math.random() * 26); // 25-50 arası
+        state.gold += borrowedGold;
+        c.aff -= 15; // İlişki düşüşü
+        state.prestige -= 3; // İtibar düşüşü
+        clampState(); 
+        updateQuestProgress();
+        render(); 
+        log(`${c.name}'dan ${borrowedGold} altın borç alındı. -15 bağlılık, -3 itibar.`);
+      };
+
+      dismissBtn.onclick = () => {
+        if(!state.selectedId){log('Seçili aday yok.');return}
+        const idx = state.chars.findIndex(x=>x.id===state.selectedId);
+        const removed = state.chars.splice(idx,1)[0]; 
+        state.selectedId=null;
+        state.gold += 40; // Hazineden 40 altın gelir
+        clampState(); 
+        updateQuestProgress();
+        render(); 
+        log(`${removed.name} haremden ayrıldı. Hazineden +40 altın.`);
+      };
+
+      feastBtn.onclick = () => {
+        if(state.gold<40){log('Altın yetersiz.');return}
+        state.gold -=40; state.happiness +=8; state.prestige +=6; 
+        clampState(); 
+        updateQuestProgress();
+        render(); 
+        log('Büyük bir şölen düzenlendi. Saray neşelendi. -40 altın.');
+      };
+
+      trainBtn.onclick = () => {
+        if(state.gold<20){log('Altın yetersiz.');return}
+        state.power +=3; state.gold -=20; 
+        clampState(); 
+        updateQuestProgress();
+        render(); 
+        log('Askerler eğitildi. Güç arttı. -20 altın.');
+      };
+
+      recruitBtn.onclick = () => {
+        if(state.gold < 50){
+          log('Altın yetersiz. Yeni aday getirmek için 50 altın gerekiyor.');
+          return;
+        }
+        
+        const names = ['Nehir','Seda','Zeynep','Elif','Bahar','Selin','Yasemin','Sinem','Katarina','Sedat Paşa'];
+        const descs = ['Nazik','Gizemli','Bilge','Neşeli','Sanatsever','Hırçın','Merhametli','Cesur','İmparotiçe','Sadık Paşa'];
+        const emoji = ['🌺','🌼','🌙','🌊','🔮','🔥','🌸','🍃','💋','🎩'];
+        
+        const existingNames = state.chars.map(c => c.name);
+        const availableNames = names.filter(name => !existingNames.includes(name));
+        
+        if(availableNames.length === 0){
+          log('Tüm olası adaylar zaten haremde!');
+          return;
+        }
+        
+        const randomIndex = Math.floor(Math.random() * availableNames.length);
+        const selectedName = availableNames[randomIndex];
+        const originalIndex = names.indexOf(selectedName);
+        
+        const id = Date.now()%100000 + Math.floor(Math.random()*100);
+        const c = {
+          id, 
+          name: selectedName,
+          emoji: emoji[originalIndex], 
+          desc: descs[originalIndex], 
+          aff: 20+Math.floor(Math.random()*20)
+        };
+        
+        state.chars.push(c);
+        state.gold -= 50;
+        updateQuestProgress();
+        render(); 
+        save(); 
+        log(`${c.name} saraya getirildi. -50 altın.`);
+      };
+
+      nextDayBtn.onclick = () => {
+        if(state.gold < 150){
+          log('Altın yetersiz. Sonraki güne atlamak için 150 altın gerekiyor.');
+          return;
+        }
+        state.gold -= 150;
+        endDay();
+        log('Sonraki güne atlandı. -150 altın.');
+      };
+
+      resetBtn.onclick = () => {
+        if(confirm('Her şeyi tamamen sıfırlamak istediğinize emin misiniz? Tüm ilerleme kaybolacak!')){
+          localStorage.removeItem('harem_state_v1');
+          init();
+          render();
+          log('Oyun tamamen sıfırlandı. Her şey baştan başlıyor.');
+        }
+      };
+    }
+
+    // Akıllı görev oluştur
+    function generateNewQuest() {
+      const availableTemplates = questTemplates.filter(template => {
+        if (state.chars.length === 0 && template.type !== 'members') {
+          return false;
+        }
+        
+        const testQuest = template.generate(state);
+        return !testQuest.check(state);
+      });
+
+      if (availableTemplates.length === 0) {
+        const randomTemplate = questTemplates[Math.floor(Math.random() * questTemplates.length)];
+        state.currentQuest = randomTemplate.generate(state);
+      } else {
+        const randomTemplate = availableTemplates[Math.floor(Math.random() * availableTemplates.length)];
+        state.currentQuest = randomTemplate.generate(state);
+      }
+      
+      state.questProgress = 0;
+      state.questCompleted = false;
+      
+      updateQuestProgress();
+    }
+
+    // Görev ilerlemesini güncelle
+    function updateQuestProgress() {
+      if (!state.currentQuest) return;
+      
+      switch(state.currentQuest.type) {
+        case 'gold':
+          state.questProgress = Math.min(state.gold, state.currentQuest.target);
+          break;
+        case 'happiness':
+          state.questProgress = Math.min(state.happiness, state.currentQuest.target);
+          break;
+        case 'prestige':
+          state.questProgress = Math.min(state.prestige, state.currentQuest.target);
+          break;
+        case 'power':
+          state.questProgress = Math.min(state.power, state.currentQuest.target);
+          break;
+        case 'affection':
+          const maxAff = Math.max(...state.chars.map(c => c.aff), 0);
+          state.questProgress = Math.min(maxAff, state.currentQuest.target);
+          break;
+        case 'members':
+          state.questProgress = Math.min(state.chars.length, state.currentQuest.target);
+          break;
+        case 'day':
+          state.questProgress = Math.min(state.day, state.currentQuest.target);
+          break;
+      }
+      
+      if (state.currentQuest.check(state) && !state.questCompleted) {
+        completeQuest();
+      }
+    }
+
+    // Görevi tamamla
+    function completeQuest() {
+      state.questCompleted = true;
+      const reward = state.currentQuest.reward;
+      
+      state.gold += reward.gold || 0;
+      state.happiness += reward.happiness || 0;
+      state.prestige += reward.prestige || 0;
+      state.power += reward.power || 0;
+      
+      log(`🎉 Görev tamamlandı! Ödül: ${reward.gold ? reward.gold + ' altın, ' : ''}${reward.happiness ? reward.happiness + ' mutluluk, ' : ''}${reward.prestige ? reward.prestige + ' itibar, ' : ''}${reward.power ? reward.power + ' güç' : ''}`);
+      
+      setTimeout(() => {
+        generateNewQuest();
+        render();
+        log('Yeni bir görev verildi!');
+      }, 1500);
+    }
+
+    // Gün sonu işlemleri
+    function endDay(){
+      state.day +=1;
+      
+      // Her gün görev ilerlemesini güncelle
+      updateQuestProgress();
+      
+      state.chars.forEach(c=>{
+        const r = Math.random();
+        if(r<0.12) c.aff -= Math.floor(Math.random()*6+3);
+        else if(r>0.88) c.aff += Math.floor(Math.random()*6+3);
+      });
+      
+      if(state.happiness>70) state.prestige +=2;
+      state.gold += 8 + Math.floor(Math.random()*6);
+      clampState(); 
+      updateQuestProgress();
+      render(); 
+      save(); 
+      log('Gün sonu: Saray yaşamı devam ediyor.');
+    }
+
+    // Görev panelini render et
+    function renderQuest() {
+      if (!state.currentQuest) {
+        currentQuestEl.textContent = 'Görev bulunmuyor.';
+        questRewardEl.textContent = 'Ödül: ';
+        questProgressEl.textContent = 'İlerleme: ';
+        return;
+      }
+      
+      currentQuestEl.textContent = state.currentQuest.desc;
+      
+      const rewardText = [];
+      if (state.currentQuest.reward.gold) rewardText.push(state.currentQuest.reward.gold + ' altın');
+      if (state.currentQuest.reward.happiness) rewardText.push(state.currentQuest.reward.happiness + ' mutluluk');
+      if (state.currentQuest.reward.prestige) rewardText.push(state.currentQuest.reward.prestige + ' itibar');
+      if (state.currentQuest.reward.power) rewardText.push(state.currentQuest.reward.power + ' güç');
+      
+      questRewardEl.textContent = 'Ödül: ' + rewardText.join(', ');
+      questProgressEl.textContent = `İlerleme: ${state.questProgress}/${state.currentQuest.target}`;
+      
+      if (state.questCompleted) {
+        currentQuestEl.style.color = 'var(--good)';
+        questRewardEl.style.color = 'var(--good)';
+      } else {
+        currentQuestEl.style.color = '';
+        questRewardEl.style.color = '';
+      }
     }
 
     // Roster render
@@ -153,9 +610,19 @@
     }
 
     function renderSelected(){
-      if(!state.selectedId){selectedArea.innerHTML=`<div style="text-align:center;color:var(--muted);">Henüz aday seçilmedi.</div>`;return}
+      const hasSelected = !!state.selectedId;
       const c = state.chars.find(x=>x.id===state.selectedId);
-      if(!c){selectedArea.innerHTML='<div>Seçilmiş aday bulunamadı.</div>';return}
+      
+      if(!hasSelected || !c){
+        selectedArea.innerHTML=`<div style="text-align:center;color:var(--muted);">Henüz aday seçilmedi.</div>`;
+        flirtBtn.disabled = true;
+        talkBtn.disabled = true;
+        giftBtn.disabled = true;
+        borrowFromSelectedBtn.disabled = true;
+        dismissBtn.disabled = true;
+        return;
+      }
+      
       selectedArea.innerHTML = `
         <div style='display:flex;gap:12px;align-items:center'>
           <div style='width:96px;height:96px;border-radius:12px;background:linear-gradient(135deg,rgba(255,255,255,0.02),rgba(0,0,0,0.12));display:flex;align-items:center;justify-content:center;font-size:44px'>${c.emoji}</div>
@@ -166,16 +633,13 @@
             <div style='margin-top:8px;font-size:13px'>Bağlılık: <strong>${Math.round(c.aff)}</strong></div>
           </div>
         </div>
-        <div style='margin-top:10px;display:flex;gap:8px'>
-          <button class='btn' id='flirtBtn'>Flört Et (+8 Sevgi)</button>
-          <button class='btn secondary' id='talkPrivateBtn'>Özel Konuşma (+4 Sevgi)</button>
-          <button class='btn secondary' id='dismissBtn'>Yanından Gönder (-)</button>
-        </div>
       `;
-
-      document.getElementById('flirtBtn').onclick=()=>actionFlirt(c.id);
-      document.getElementById('talkPrivateBtn').onclick=()=>actionTalk(c.id);
-      document.getElementById('dismissBtn').onclick=()=>{dismiss(c.id)};
+      
+      flirtBtn.disabled = false;
+      talkBtn.disabled = false;
+      giftBtn.disabled = false;
+      borrowFromSelectedBtn.disabled = false;
+      dismissBtn.disabled = false;
     }
 
     // Actions
@@ -183,70 +647,6 @@
       const time = 'Gün '+state.day;
       const p=document.createElement('div');p.innerHTML=`<strong>${time}:</strong> ${text}`;
       logEl.prepend(p);
-    }
-
-    function actionFlirt(id){
-      const c = state.chars.find(x=>x.id===id); if(!c) return;
-      c.aff += 8; state.happiness+=1; state.prestige+=1; state.gold -= 5;
-      clampState(); render(); log(`${c.name} ile hoş bir an yaşandı. +8 bağlılık, -5 altın.`)
-    }
-    function actionTalk(id){
-      const c = state.chars.find(x=>x.id===id); if(!c) return;
-      c.aff +=4; state.happiness+=1; state.gold -=2; clampState(); render(); log(`${c.name} ile derin bir sohbet. +4 bağlılık.`)
-    }
-    function dismiss(id){
-      const idx = state.chars.findIndex(x=>x.id===id); if(idx===-1) return;
-      const removed = state.chars.splice(idx,1)[0]; if(state.selectedId===id) state.selectedId=null;
-      render(); log(`${removed.name} haremden ayrıldı.`)
-    }
-
-    // Global events
-    document.getElementById('talkBtn').onclick=()=>{
-      if(!state.selectedId){log('Seçili aday yok.');return}
-      actionTalk(state.selectedId);
-      endDay();
-    }
-    document.getElementById('giftBtn').onclick=()=>{
-      if(state.gold<10){log('Altın yetersiz.');return}
-      if(!state.selectedId){log('Seçili aday yok.');return}
-      const c = state.chars.find(x=>x.id===state.selectedId);
-      state.gold -=10; c.aff +=12; state.happiness +=2; clampState(); render(); log(`${c.name} hediye aldı. +12 bağlılık, -10 altın.`); endDay();
-    }
-    document.getElementById('feastBtn').onclick=()=>{
-      if(state.gold<40){log('Altın yetersiz.');return}
-      state.gold -=40; state.happiness +=8; state.prestige +=6; clampState(); render(); log('Büyük bir şölen düzenlendi. Saray neşelendi.'); endDay();
-    }
-    document.getElementById('trainBtn').onclick=()=>{
-      state.power +=3; state.gold -=20; clampState(); render(); log('Askerler eğitildi. Güç arttı.'); endDay();
-    }
-
-    document.getElementById('recruitBtn').onclick=()=>{
-      // Yeni rastgele aday
-      const names = ['Nehir','Seda','Zeynep','Elif','Bahar','Selin','Yasemin','Sinem', 'Katarina'];
-      const descs = ['Nazik','Gizemli','Bilge','Neşeli','Sanatsever','Hırçın','Merhametli','Cesur', 'İmparotiçe'];
-      const emoji = ['🌺','🌼','🌙','🌊','🔮','🔥','🌸','🍃', '💋'];
-      const id = Date.now()%100000 + Math.floor(Math.random()*100);
-      const i = Math.floor(Math.random()*names.length);
-      const c = {id, name:names[i], emoji:emoji[i], desc:descs[i], aff:20+Math.floor(Math.random()*20)};
-      state.chars.push(c); render(); save(); log(`${c.name} saraya getirildi.`);
-    }
-
-    document.getElementById('resetBtn').onclick=()=>{
-      if(confirm('Her şeyi sıfırlamak istediğinize emin misiniz?')){localStorage.removeItem('harem_state_v1');init();render();log('Oyun sıfırlandı.');}
-    }
-
-    function endDay(){
-      state.day +=1; // her gün küçük olaylar
-      state.chars.forEach(c=>{
-        // rastgele düşüş veya yükseliş
-        const r = Math.random();
-        if(r<0.12) c.aff -= Math.floor(Math.random()*6+3);
-        else if(r>0.88) c.aff += Math.floor(Math.random()*6+3);
-      });
-      // otomatik kazanım ya da kayb
-      if(state.happiness>70) state.prestige +=2;
-      state.gold += 8 + Math.floor(Math.random()*6);
-      clampState(); render(); save(); log('Gün sonu: Saray yaşamı devam ediyor.');
     }
 
     function clampState(){
@@ -258,7 +658,15 @@
     }
 
     function render(){
-      renderRoster(); renderSelected(); goldEl.innerText = state.gold; dayEl.innerText = state.day; happinessEl.innerText = state.happiness; prestigeEl.innerText = state.prestige; powerEl.innerText = state.power; save();
+      renderRoster(); 
+      renderSelected(); 
+      renderQuest();
+      goldEl.innerText = state.gold; 
+      dayEl.innerText = state.day; 
+      happinessEl.innerText = state.happiness; 
+      prestigeEl.innerText = state.prestige; 
+      powerEl.innerText = state.power; 
+      save();
     }
 
     // İlk yükleme
@@ -266,7 +674,9 @@
 
     // Kısa klavye kısayolları
     document.addEventListener('keydown', (e)=>{
-      if(e.key==='n'){document.getElementById('recruitBtn').click()}
+      if(e.key==='n'){recruitBtn.click()}
+      if(e.key==='b'){borrowFromSelectedBtn.click()}
+      if(e.key==='d'){nextDayBtn.click()}
       if(e.key==='s'){localStorage.setItem('harem_state_v1',JSON.stringify(state));log('Elle kaydedildi.');}
     });
 
